@@ -47,79 +47,61 @@ User input to correct:
 ${text}
 """`;
 
-    const attempts = [
-      { model: "gemini-2.0-flash", api: "v1beta" },
-      { model: "gemini-1.5-flash", api: "v1beta" },
-      { model: "gemini-pro", api: "v1" },
-    ];
-    let lastError = null;
-
-    for (const { model, api } of attempts) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 1024,
-              },
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          lastError = `${model}: HTTP ${response.status}`;
-          console.warn(`Model ${model} (${api}) failed: ${response.status}`);
-          continue; // try next model
-        }
-
-        const data = await response.json();
-
-        // Extract the response text
-        const responseText =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-        if (!responseText) {
-          lastError = `${model}: empty response`;
-          continue;
-        }
-
-        // Parse the JSON response — strip markdown code fences if present
-        let jsonStr = responseText.trim();
-        if (jsonStr.startsWith("```")) {
-          jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-        }
-
-        let parsed;
-        try {
-          parsed = JSON.parse(jsonStr);
-        } catch {
-          // If JSON parsing fails, use the raw text as improved version
-          parsed = { improved: jsonStr, corrections: [] };
-        }
-
-        const improved = parsed.improved || text;
-        const corrections = parsed.corrections || [];
-
-        return {
-          success: true,
-          original: text,
-          improved,
-          corrections_count: corrections.length,
-          corrections: corrections.slice(0, 10),
-        };
-      } catch (modelError) {
-        lastError = `${model}: ${modelError.message}`;
-        console.warn(`Model ${model} error:`, modelError.message);
-        continue;
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1024,
+          },
+        }),
       }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Gemini API HTTP error:", response.status, errText);
+      throw new Error(`Gemini API error: HTTP ${response.status}`);
     }
 
-    throw new Error(`All models failed. Last error: ${lastError}`);
+    const data = await response.json();
+
+    // Extract the response text
+    const responseText =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!responseText) {
+      throw new Error("Empty response from Gemini API");
+    }
+
+    // Parse the JSON response — strip markdown code fences if present
+    let jsonStr = responseText.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // If JSON parsing fails, use the raw text as improved version
+      parsed = { improved: jsonStr, corrections: [] };
+    }
+
+    const improved = parsed.improved || text;
+    const corrections = parsed.corrections || [];
+
+    return {
+      success: true,
+      original: text,
+      improved,
+      corrections_count: corrections.length,
+      corrections: corrections.slice(0, 10),
+    };
   } catch (error) {
     console.error("Gemini Grammar API error:", error.message);
 

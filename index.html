@@ -20,10 +20,10 @@
 
   <div class="app-wrapper">
 
-    <!-- ═══ Header Accent Line ═══ -->
+    <!-- Header Accent Line -->
     <div class="header-accent"></div>
 
-    <!-- ═══ Header ═══ -->
+    <!-- Header -->
     <header class="header">
       <div class="header-brand">
         <div class="header-logo">⚡</div>
@@ -33,60 +33,64 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="header-badge"><span class="dot"></span>Rule-Based Engine</span>
+        <span class="header-badge"><span class="dot"></span> Rule-Based Engine</span>
         <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle examples menu">☰</button>
       </div>
     </header>
 
-    <!-- ═══ Main ═══ -->
+    <!-- Main Content -->
     <main class="main-content">
 
-      <!-- ─── Input Panel ─── -->
-      <div class="panel input-panel" id="input-panel">
-        <div class="panel-header">
-          <span class="panel-title">
-            <span class="icon">📝</span> English Commands
-          </span>
-          <div class="panel-actions">
-            <button class="btn" id="grammar-btn" title="Improve English grammar">
-              <span>✏️</span> Grammar
-            </button>
-            <button class="btn" id="clear-btn">
-              <span>✕</span> Clear
-            </button>
-            <button class="btn btn-primary" id="translate-btn">
-              <span>▶</span> Translate <span class="kbd-hint">Ctrl+↵</span>
-            </button>
+      <!-- Left Column: Input + Grammar -->
+      <div class="left-col">
+
+        <!-- Input Panel -->
+        <div class="panel input-panel" id="input-panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <span class="icon">📝</span> English Commands
+            </span>
+            <div class="panel-actions">
+              <button class="btn" id="grammar-btn" title="Improve grammar with AI">
+                ✏️ Grammar
+              </button>
+              <button class="btn" id="clear-btn">✕ Clear</button>
+              <button class="btn btn-primary" id="translate-btn">
+                ▶ Translate <span class="kbd-hint">Ctrl+↵</span>
+              </button>
+            </div>
+          </div>
+          <div class="editor-area">
+            <div class="line-numbers" id="line-numbers"><span>1</span></div>
+            <textarea id="english-input"
+              placeholder="Type structured English commands here...&#10;&#10;Examples:&#10;  create variable x value 10&#10;  print &quot;Hello World&quot;&#10;  if x greater than 5 then print x&#10;  for i from 1 to 10 do print i"
+              spellcheck="false" autocomplete="off"></textarea>
           </div>
         </div>
-        <div class="editor-area">
-          <div class="line-numbers" id="line-numbers"><span>1</span></div>
-          <textarea id="english-input"
-            placeholder="Type structured English commands here...&#10;&#10;Examples:&#10;  create variable x value 10&#10;  print &quot;Hello World&quot;&#10;  if x greater than 5 then print x&#10;  for i from 1 to 10 do print i"
-            spellcheck="false" autocomplete="off"></textarea>
-        </div>
-      </div>
 
-      <!-- ─── Grammar Panel ─── -->
-      <div class="panel grammar-panel" id="grammar-panel" style="display: none;">
-        <div class="panel-header">
-          <span class="panel-title">
-            <span class="icon">✏️</span> Grammar Suggestions
-          </span>
-        </div>
-        <div class="panel-body">
-          <div id="grammar-suggestions"></div>
-          <div id="grammar-improved" style="margin-top: 1rem; display: none;">
-            <p><strong>Improved Text:</strong></p>
-            <textarea id="improved-text" readonly rows="4"></textarea>
-            <button class="btn btn-small" id="use-improved-btn" style="margin-top: 0.5rem;">
-              ✓ Use Improved Text
-            </button>
+        <!-- Grammar Panel (hidden by default) -->
+        <div class="panel grammar-panel" id="grammar-panel" style="display: none;">
+          <div class="panel-header">
+            <span class="panel-title">
+              <span class="icon">✏️</span> AI Grammar Suggestions
+            </span>
+            <button class="btn btn-close" id="grammar-close-btn">✕</button>
+          </div>
+          <div class="panel-body">
+            <div id="grammar-suggestions"></div>
+            <div id="grammar-improved" style="display: none;">
+              <p><strong>Improved Text:</strong></p>
+              <textarea id="improved-text" readonly rows="3"></textarea>
+              <button class="btn btn-primary btn-small" id="use-improved-btn" style="margin-top: 0.5rem;">
+                ✓ Use Improved Text
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
 
-      <!-- ─── Output Panel ─── -->
+      <!-- Right Column: Output -->
       <div class="panel output-panel" id="output-panel">
         <div class="panel-header">
           <span class="panel-title">
@@ -128,20 +132,15 @@
         </div>
       </div>
 
-      <!-- ─── Sidebar ─── -->
+      <!-- Sidebar -->
       <aside class="sidebar" id="sidebar">
         <div>
-          <div class="sidebar-title">
-            <span>💡</span> Examples
-          </div>
+          <div class="sidebar-title">💡 Examples</div>
           <div id="examples-list"></div>
         </div>
-
         <div class="ast-panel panel">
           <div class="panel-header">
-            <span class="panel-title">
-              <span class="icon">🔍</span> AST Debug
-            </span>
+            <span class="panel-title"><span class="icon">🔍</span> AST Debug</span>
           </div>
           <div class="panel-body">
             <pre id="ast-output"></pre>
@@ -151,24 +150,13 @@
 
     </main>
 
-    <!-- ═══ Info Bar ═══ -->
+    <!-- Footer -->
     <footer class="info-bar">
-      <div class="info-item">
-        <span class="dot"></span>
-        Rule-Based Engine
-      </div>
-      <div class="info-item">
-        14+ Grammar Patterns
-      </div>
-      <div class="info-item">
-        80+ Synonyms Supported
-      </div>
-      <div class="info-item">
-        Python • Java • C++
-      </div>
-      <div class="info-item" style="margin-left: auto; font-size:0.68rem; opacity:0.5;">
-        © 2026 CodeWriter Pro. All rights reserved.
-      </div>
+      <div class="info-item"><span class="dot"></span> Rule-Based Engine</div>
+      <div class="info-item">14+ Grammar Patterns</div>
+      <div class="info-item">80+ Synonyms</div>
+      <div class="info-item">Python • Java • C++</div>
+      <div class="info-item" style="margin-left: auto; opacity: 0.4;">© 2026 CodeWriter Pro</div>
     </footer>
 
   </div>
