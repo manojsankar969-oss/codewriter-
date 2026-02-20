@@ -1,0 +1,27 @@
+{
+  "name": "code-writer",
+  "version": "1.0.0",
+  "description": "Rule-based English-to-Code translator with optional grammar improvement API",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test_runner.js"
+  },
+  "keywords": [
+    "english-to-code",
+    "translator",
+    "rule-based",
+    "code-generation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {}
+}

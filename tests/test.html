@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CODE_WRITER — Test Suite</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 32px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            color: #a5b4fc;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin: 24px 0 8px;
+            color: #94a3b8;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 4px;
+        }
+
+        .result {
+            padding: 6px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .pass {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+        }
+
+        .fail {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+        }
+
+        .summary {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .summary.all-pass {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid #10b981;
+            color: #34d399;
+        }
+
+        .summary.has-fail {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid #ef4444;
+            color: #f87171;
+        }
+
+        .detail {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>⚡ CODE_WRITER Test Suite</h1>
+    <div id="results"></div>
+    <div id="summary"></div>
+
+    <script type="module">
+        import { preprocess, preprocessLines } from '../js/preprocessor.js';
+        import { tokenize, TokenType } from '../js/tokenizer.js';
+        import { parse, parseLine } from '../js/parser.js';
+        import { generate, generateProgram } from '../js/generator.js';
+        import { translateLine, translateProgram } from '../js/app.js';
+
+        const resultsEl = document.getElementById('results');
+        const summaryEl = document.getElementById('summary');
+        let passed = 0, failed = 0, currentSection = '';
+
+        function section(name) {
+            currentSection = name;
+            const h2 = document.createElement('h2');
+            h2.textContent = name;
+            resultsEl.appendChild(h2);
+        }
+
+        function assert(name, actual, expected) {
+            const pass = actual === expected;
+            const div = document.createElement('div');
+            div.className = `result ${pass ? 'pass' : 'fail'}`;
+            if (pass) {
+                div.textContent = `✓ ${name}`;
+                passed++;
+            } else {
+                div.innerHTML = `✗ ${name}<br><span class="detail">Expected: ${JSON.stringify(expected)}<br>Got: ${JSON.stringify(actual)}</span>`;
+                failed++;
+            }
+            resultsEl.appendChild(div);
+        }
+
+        function assertIncludes(name, actual, substring) {
+            const pass = actual && actual.includes(substring);
+            const div = document.createElement('div');
+            div.className = `result ${pass ? 'pass' : 'fail'}`;
+            if (pass) {
+                div.textContent = `✓ ${name}`;
+                passed++;
+            } else {
+                div.innerHTML = `✗ ${name}<br><span class="detail">Expected to contain: ${JSON.stringify(substring)}<br>Got: ${JSON.stringify(actual)}</span>`;
+                failed++;
+            }
+            resultsEl.appendChild(div);
+        }
+
+        // ═══════════════ PREPROCESSOR TESTS ═══════════════
+
+        section('Preprocessor');
+
+        assert('Lowercase', preprocess('PRINT X'), preprocess('print x'));
+        assert('Synonym: make → create', preprocess('make x'), 'create x');
+        assert('Synonym: display → print', preprocess('display x'), 'print x');
+        assert('Synonym: show → print', preprocess('show x'), 'print x');
+        assert('Filler removal: "please"', preprocess('please print x'), 'print x');
+        assert('Filler removal: "the"', preprocess('print the x'), 'print x');
+        assert('Multiple synonyms', preprocess('make variable y equal 20'), 'create variable y value 20');
+        assert('Complex synonym', preprocess('set x as 10'), 'set x value 10');
+        assert('Empty input', preprocess(''), '');
+        assert('Null input', preprocess(null), '');
+
+        // ═══════════════ TOKENIZER TESTS ═══════════════
+
+        section('Tokenizer');
+
+        let tokens = tokenize('create variable x value 10');
+        assert('Token count', tokens.length, 5);
+        assert('First token is keyword', tokens[0].type, TokenType.KEYWORD);
+        assert('Third token is identifier', tokens[2].type, TokenType.IDENTIFIER);
+        assert('Fifth token is number', tokens[4].type, TokenType.NUMBER);
+
+        tokens = tokenize('print "hello world"');
+        assert('String token', tokens[1].type, TokenType.STRING);
+        assert('String value', tokens[1].value, 'hello world');
+
+        tokens = tokenize('set x value true');
+        assert('Boolean token', tokens[2].type, TokenType.KEYWORD);
+
+        // ═══════════════ PARSER TESTS ═══════════════
+
+        section('Parser — Variable Creation');
+
+        let result = parseLine('create variable x value 10');
+        assert('Variable creation parses', result.success, true);
+        assert('Variable name', result.node.name, 'x');
+        assert('Variable value', result.node.value, '10');
+
+        result = parseLine('create x value 10');
+        assert('Short variable creation', result.success, true);
+        assert('Short variable name', result.node.name, 'x');
+
+        section('Parser — Assignment');
+
+        result = parseLine('set x to 20');
+        assert('Assignment parses', result.success, true);
+        assert('Assignment name', result.node.name, 'x');
+        assert('Assignment value', result.node.value, '20');
+
+        section('Parser — Print');
+
+        result = parseLine('print x');
+        assert('Print parses', result.success, true);
+        assert('Print type', result.node.type, 'print');
+        assert('Print values', result.node.values[0], 'x');
+
+        result = parseLine('print "hello"');
+        assert('Print string', result.success, true);
+        assert('Print string value', result.node.values[0], '"hello"');
+
+        section('Parser — Arithmetic');
+
+        result = parseLine('add x and y store in z');
+        assert('Arithmetic parses', result.success, true);
+        assert('Arithmetic operator', result.node.operator, 'add');
+        assert('Arithmetic left', result.node.left, 'x');
+        assert('Arithmetic right', result.node.right, 'y');
+        assert('Arithmetic result', result.node.result, 'z');
+
+        section('Parser — If Statement');
+
+        result = parseLine('if x greater than 10 then print x');
+        assert('If parses', result.success, true);
+        assert('If type', result.node.type, 'if_statement');
+        assert('If condition operator', result.node.condition.operator, 'greater');
+        assert('If has then body', !!result.node.thenBody, true);
+
+        section('Parser — While Loop');
+
+        result = parseLine('while x less than 10 do increment x');
+        assert('While parses', result.success, true);
+        assert('While condition', result.node.condition.operator, 'less');
+        assert('While has body', !!result.node.body, true);
+
+        section('Parser — For Loop');
+
+        result = parseLine('for i from 1 to 10 do print i');
+        assert('For parses', result.success, true);
+        assert('For variable', result.node.variable, 'i');
+        assert('For from', result.node.from, '1');
+        assert('For to', result.node.to, '10');
+
+        section('Parser — Function');
+
+        result = parseLine('define function greet do print "hello"');
+        assert('Function def parses', result.success, true);
+        assert('Function name', result.node.name, 'greet');
+
+        result = parseLine('call greet');
+        assert('Function call parses', result.success, true);
+        assert('Call name', result.node.name, 'greet');
+
+        section('Parser — List');
+
+        result = parseLine('create list nums value 1 2 3');
+        assert('List creation parses', result.success, true);
+        assert('List name', result.node.name, 'nums');
+        assert('List values', result.node.values.length, 3);
+
+        result = parseLine('append 4 to nums');
+        assert('Append parses', result.success, true);
+        assert('Append list', result.node.list, 'nums');
+        assert('Append value', result.node.value, '4');
+
+        section('Parser — Comment');
+
+        result = parseLine('comment this is a note');
+        assert('Comment parses', result.success, true);
+        assert('Comment text includes "this"', result.node.text.includes('this'), true);
+
+        section('Parser — Increment/Decrement');
+
+        result = parseLine('increment x');
+        assert('Increment parses', result.success, true);
+        assert('Increment variable', result.node.variable, 'x');
+        assert('Default amount', result.node.amount, '1');
+
+        result = parseLine('decrement y by 5');
+        assert('Decrement parses', result.success, true);
+        assert('Decrement amount', result.node.amount, '5');
+
+        section('Parser — Input');
+
+        result = parseLine('input x');
+        assert('Input parses', result.success, true);
+        assert('Input variable', result.node.variable, 'x');
+
+        section('Parser — Return');
+
+        result = parseLine('return x');
+        assert('Return parses', result.success, true);
+        assert('Return value', result.node.value, 'x');
+
+        section('Parser — Error Handling');
+
+        result = parseLine('blah blah blah');
+        assert('Invalid input fails', result.success, false);
+        assert('Error message exists', !!result.error, true);
+
+        // ═══════════════ CODE GENERATOR TESTS ═══════════════
+
+        section('Generator — Python');
+
+        result = parseLine('create variable x value 10');
+        assert('Python variable', generate(result.node, 'python'), 'x = 10');
+
+        result = parseLine('print x');
+        assert('Python print', generate(result.node, 'python'), 'print(x)');
+
+        result = parseLine('set y to 20');
+        assert('Python assignment', generate(result.node, 'python'), 'y = 20');
+
+        result = parseLine('increment x');
+        assert('Python increment', generate(result.node, 'python'), 'x += 1');
+
+        section('Generator — Java');
+
+        result = parseLine('create variable x value 10');
+        assert('Java variable', generate(result.node, 'java'), 'int x = 10;');
+
+        result = parseLine('print x');
+        assert('Java print', generate(result.node, 'java'), 'System.out.println(x);');
+
+        result = parseLine('increment x');
+        assert('Java increment', generate(result.node, 'java'), 'x++;');
+
+        section('Generator — C++');
+
+        result = parseLine('create variable x value 10');
+        assert('C++ variable', generate(result.node, 'cpp'), 'int x = 10;');
+
+        result = parseLine('print x');
+        assert('C++ print', generate(result.node, 'cpp'), 'std::cout << x << std::endl;');
+
+        result = parseLine('input y');
+        assert('C++ input', generate(result.node, 'cpp'), 'std::cin >> y;');
+
+        section('Generator — Multi-line Program');
+
+        let programResult = translateProgram('create variable x value 10\nprint x', 'python');
+        assert('Python program success', programResult.success, true);
+        assertIncludes('Python program has variable', programResult.code, 'x = 10');
+        assertIncludes('Python program has print', programResult.code, 'print(x)');
+
+        programResult = translateProgram('create variable x value 10\nprint x', 'java');
+        assert('Java program success', programResult.success, true);
+        assertIncludes('Java program has class', programResult.code, 'public class Main');
+        assertIncludes('Java program has main', programResult.code, 'public static void main');
+
+        programResult = translateProgram('create variable x value 10\nprint x', 'cpp');
+        assert('C++ program success', programResult.success, true);
+        assertIncludes('C++ program has include', programResult.code, '#include <iostream>');
+        assertIncludes('C++ program has main', programResult.code, 'int main()');
+
+        // ═══════════════ END-TO-END (SYNONYM TOLERANCE) ═══════════════
+
+        section('End-to-End — Synonym Tolerance');
+
+        result = translateLine('make y equal 20', 'python');
+        assert('Synonym: make y equal 20', result.code, 'y = 20');
+
+        result = translateLine('display x', 'python');
+        assert('Synonym: display → print', result.code, 'print(x)');
+
+        result = translateLine('show "hello"', 'python');
+        assert('Synonym: show → print string', result.code, 'print("hello")');
+
+        result = translateLine('declare variable z value 42', 'python');
+        assert('Synonym: declare → create', result.code, 'z = 42');
+
+        // ═══════════════ SUMMARY ═══════════════
+
+        const total = passed + failed;
+        summaryEl.className = `summary ${failed === 0 ? 'all-pass' : 'has-fail'}`;
+        summaryEl.textContent = `${passed} / ${total} tests passed${failed > 0 ? ` — ${failed} failed` : ' ✓'}`;
+
+    </script>
+</body>
+
+</html>
